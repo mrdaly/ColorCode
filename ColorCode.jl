@@ -47,14 +47,23 @@ function updateBelief(belief::Belief, button::Int, assignment::Dict{Symbol,Int})
     end
   end
   total = sum(values(belief.b))
-  for sym in keys(belief.b)
-    belief.b[sym] = belief.b[sym] / total
-  end
-  print(belief.b)
+  map!(x->x/total,values(belief.b))
+  #print(belief.b)
 end
 
 function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int})
   for sym in keys(assignment)
     assignment[sym] = rand(1:2)
   end
+end
+
+# choose letter IF we are confident, and update belief
+function chooseLetter(belief::Belief, commString::String, certaintyThreshold)
+  selected_letter = findfirst(prob->prob>=certaintyThreshold,belief.b) 
+  if !isnothing(selected_letter)
+    commString = commString * keyboardStrings[selected_letter]
+    prior = Dict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
+    belief.b = prior
+  end
+  return commString
 end
