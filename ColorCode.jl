@@ -31,7 +31,7 @@ keyboardStrings = OrderedDict(:A => "A",
 keyboardStrings = OrderedDict([e[1] => "\\fbox{$(e[2])}" for e in keyboardStrings])
 
 mutable struct Belief
-  b::Dict{Symbol,Float64}
+  b::OrderedDict{Symbol,Float64}
   right_color_count::Int
   wrong_color_count::Int
 end
@@ -52,8 +52,15 @@ function updateBelief(belief::Belief, button::Int, assignment::Dict{Symbol,Int})
 end
 
 function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int})
-  for sym in keys(assignment)
-    assignment[sym] = rand(1:2)
+  #for sym in keys(assignment)
+  #  assignment[sym] = rand(1:2)
+  #end
+
+  sorted_belief = sort(collect(belief.b),rev=true,by=x->x[2])
+  color = 1
+  for (sym,_) in sorted_belief
+    assignment[sym] = color
+    color = color == 1 ? 2 : 1
   end
 end
 
@@ -62,7 +69,8 @@ function chooseLetter(belief::Belief, commString::String, certaintyThreshold)
   selected_letter = findfirst(prob->prob>=certaintyThreshold,belief.b) 
   if !isnothing(selected_letter)
     commString = commString * keyboardStrings[selected_letter]
-    prior = Dict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
+    nChoices = length(keyboardStrings)
+    prior = OrderedDict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
     belief.b = prior
   end
   return commString

@@ -25,11 +25,11 @@ assignment = Dict([(k,rand(1:2)) for k in keys(keyboardStrings)])
 renderAssignment(keyboard,assignment)
 
 nChoices = length(keyboardStrings)
-prior = Dict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
-belief = Belief(prior,9,1)
+prior = OrderedDict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
+belief = Belief(prior,99,1)
 certaintyThreshold = 0.95
 
-plot(Dict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all)
+plot(OrderedDict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all,legend=false)
 gui()
 
 function buttonCallback(button)
@@ -37,7 +37,7 @@ function buttonCallback(button)
   changeAssignment(belief,assignment)
   keyboard.commString[] = chooseLetter(belief,keyboard.commString[],certaintyThreshold)
 
-  plot(Dict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all)
+  plot(OrderedDict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all,legend=false)
   gui()
 
   #randomAssignment = Dict([(k,rand(1:2)) for k in keys(keyboardStrings)])
