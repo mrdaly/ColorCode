@@ -5,7 +5,8 @@ function simulate(str)
   assignment = Dict([(k,1) for k in keys(keyboardStrings)])
 
   nChoices = length(keyboardStrings)
-  prior = OrderedDict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
+  #prior = OrderedDict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
+  prior = getPrior("")
   belief = Belief(prior,99,1)
   changeAssignment(belief,assignment)
   certaintyThreshold = 0.95
