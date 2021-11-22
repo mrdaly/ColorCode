@@ -22,8 +22,6 @@ buttons = [button(x) for x in ["red" "blue"]]
 
 keyboard = KeyboardFrontEnd(OrderedDict([sym => latex(str) for (sym,str) in keyboardStrings]),latex("\\textrm{|}"))
 
-nChoices = length(keyboardStrings)
-#prior = OrderedDict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
 prior = getPrior("")
 commString = Ref("")
 belief = Belief(prior,99,1)

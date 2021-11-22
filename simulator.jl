@@ -1,11 +1,9 @@
 using Statistics
 include("ColorCode.jl")
 
-function simulate(str)
+function simulate(str,error_rate)
   assignment = Dict([(k,1) for k in keys(keyboardStrings)])
 
-  nChoices = length(keyboardStrings)
-  #prior = OrderedDict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
   prior = getPrior("")
   belief = Belief(prior,99,1)
   changeAssignment(belief,assignment)
@@ -17,7 +15,11 @@ function simulate(str)
     clickCount = 0
     while true
       sym = c == ' ' ? :SPACE : Symbol(c)
-      button = assignment[sym]
+      if rand() < error_rate
+        button = assignment[sym]==1 ? 2 : 1
+      else
+        button = assignment[sym]
+      end
       clickCount += 1
       updateBelief(belief,button,assignment)
       changeAssignment(belief,assignment)
@@ -34,13 +36,14 @@ function simulate(str)
 end
 
 
-if length(ARGS) != 1
-    error("usage: julia simulator.jl <infile>.txt")
+if length(ARGS) != 2
+    error("usage: julia simulator.jl <infile>.txt <error_rate>")
 end
 
 inputfilename = ARGS[1]
+error_rate = parse(Float64,ARGS[2])
 
 open(inputfilename) do f
   str = chomp(uppercase(read(f,String)))
-  simulate(str)
+  simulate(str,error_rate)
 end
