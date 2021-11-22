@@ -21,8 +21,6 @@ end
 buttons = [button(x) for x in ["red" "blue"]]
 
 keyboard = KeyboardFrontEnd(OrderedDict([sym => latex(str) for (sym,str) in keyboardStrings]),latex("\\textrm{|}"))
-assignment = Dict([(k,rand(1:2)) for k in keys(keyboardStrings)])
-renderAssignment(keyboard,assignment)
 
 nChoices = length(keyboardStrings)
 #prior = OrderedDict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
@@ -30,6 +28,10 @@ prior = getPrior("")
 commString = Ref("")
 belief = Belief(prior,99,1)
 certaintyThreshold = 0.95
+
+assignment = Dict([(k,1) for k in keys(keyboardStrings)])
+changeAssignment(belief,assignment)
+renderAssignment(keyboard,assignment)
 
 plot(OrderedDict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all,legend=false)
 gui()

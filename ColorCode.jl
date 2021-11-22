@@ -33,13 +33,22 @@ mutable struct Belief
   b::OrderedDict{Symbol,Float64}
   right_color_count::Int
   wrong_color_count::Int
+  history::Vector{Vector{Tuple{Int,Dict{Symbol,Int}}}} # history keeps track of the color assignments and the colors the user chose
 end
 
-function updateBelief(belief::Belief, button::Int, assignment::Dict{Symbol,Int})
+function Belief(b::OrderedDict{Symbol,Float64},right_color_count::Int,wrong_color_count::Int)
+  belief = Belief(b,right_color_count,wrong_color_count,Vector{Vector{Tuple{Int,Dict{Symbol,Int}}}}())
+  push!(belief.history, Vector{Tuple{Int,Dict{Symbol,Int}}}())
+  return belief
+end
+
+function updateBelief(belief::Belief, color::Int, assignment::Dict{Symbol,Int})
+  push!(belief.history[end],(color,copy(assignment)))
+
   p_right_color = belief.right_color_count / (belief.right_color_count + belief.wrong_color_count)
   p_wrong_color = 1 - p_right_color
   for sym in keys(belief.b)
-    if assignment[sym] == button
+    if assignment[sym] == color
       belief.b[sym] = p_right_color * belief.b[sym]
     else
       belief.b[sym] = p_wrong_color * belief.b[sym]
@@ -47,14 +56,9 @@ function updateBelief(belief::Belief, button::Int, assignment::Dict{Symbol,Int})
   end
   total = sum(values(belief.b))
   map!(x->x/total,values(belief.b))
-  #print(belief.b)
 end
 
 function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int})
-  #for sym in keys(assignment)
-  #  assignment[sym] = rand(1:2)
-  #end
-
   sorted_belief = sort(collect(belief.b),rev=true,by=x->x[2])
   color = 1
   for (sym,_) in sorted_belief
@@ -83,6 +87,18 @@ function getPrior(commString)
   return prior
 end
 
+function learnLikelihood(belief::Belief,selected_letter::Symbol)
+    if selected_letter == :UNDO
+
+    else
+      right_count = sum(color == assignment[selected_letter] for (color,assignment) in belief.history[end])
+      wrong_count = sum(color != assignment[selected_letter] for (color,assignment) in belief.history[end])
+      belief.right_color_count += right_count
+      belief.wrong_color_count += wrong_count
+      push!(belief.history, Vector{Tuple{Int,Dict{Symbol,Int}}}())
+    end
+end
+
 # choose letter IF we are confident, and update belief
 function chooseLetter(belief::Belief, commString::String, certaintyThreshold)
   selected_letter = findfirst(prob->prob>=certaintyThreshold,belief.b) 
@@ -97,6 +113,7 @@ function chooseLetter(belief::Belief, commString::String, certaintyThreshold)
     #prior = OrderedDict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
     prior = getPrior(commString)
     belief.b = prior
+    learnLikelihood(belief,selected_letter)
   end
   return commString
 end
