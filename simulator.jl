@@ -4,35 +4,47 @@ include("ColorCode.jl")
 function simulate(str,error_rate)
   assignment = Dict([(k,1) for k in keys(keyboardStrings)])
 
-  prior = getPrior("")
-  belief = Belief(prior,99,1)
+  prior = getPrior()
+  belief = Belief(prior,9,0)
+  history = BeliefHistory()
   changeAssignment(belief,assignment)
   certaintyThreshold = 0.95
 
+  letters = Stack{Symbol}()
+  foreach(c->push!(letters,c==' ' ? :SPACE : Symbol(c)), reverse(str))
   commString = ""
-  counts = Vector()
-  for c in str
-    clickCount = 0
+  totalClicks = 0.0
+  while !isempty(letters)
+    letter = pop!(letters)
+    clickCount = 0.0
     while true
-      sym = c == ' ' ? :SPACE : Symbol(c)
       if rand() < error_rate
-        button = assignment[sym]==1 ? 2 : 1
+        color = assignment[letter]==1 ? 2 : 1
       else
-        button = assignment[sym]
+        color = assignment[letter]
       end
-      clickCount += 1
-      updateBelief(belief,button,assignment)
+      clickCount += 1.0
+      updateBelief(belief,color,assignment)
       changeAssignment(belief,assignment)
-      newCommString = chooseLetter(belief,commString,certaintyThreshold)
-      if length(newCommString) > length(commString)
+      newCommString = chooseLetter(belief,commString,certaintyThreshold,history)
+      if length(newCommString) != length(commString)
+        new_letter = nothing
+        if length(newCommString) > length(commString)
+          new_letter = newCommString[end] == ' ' ? :SPACE : Symbol(newCommString[end])
+          print("selected: $(new_letter), click count: $(clickCount)\n")
+        end
+        length(newCommString) < length(commString) ? print("selected: $(letter), click count: $(clickCount)\n") : nothing
         commString = newCommString
+        if !isnothing(new_letter) && new_letter != letter
+          push!(letters,letter)
+          push!(letters,:UNDO)
+        end
         break
       end
     end
-    print("letter: $(c) clicks: $(clickCount)\n")
-    append!(counts, clickCount)
+    totalClicks += clickCount
   end
-  print("average: $(mean(counts))\n")
+  print("average clicks per letter: $(totalClicks/length(str)))\n")
 end
 
 

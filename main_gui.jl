@@ -22,9 +22,10 @@ buttons = [button(x) for x in ["red" "blue"]]
 
 keyboard = KeyboardFrontEnd(OrderedDict([sym => latex(str) for (sym,str) in keyboardStrings]),latex("\\textrm{|}"))
 
-prior = getPrior("")
+prior = getPrior()
 commString = Ref("")
 belief = Belief(prior,99,1)
+history = BeliefHistory()
 certaintyThreshold = 0.95
 
 assignment = Dict([(k,1) for k in keys(keyboardStrings)])
@@ -37,7 +38,7 @@ gui()
 function buttonCallback(button,commString)
   updateBelief(belief,button,assignment)
   changeAssignment(belief,assignment)
-  commString[] = chooseLetter(belief,commString[],certaintyThreshold)
+  commString[] = chooseLetter(belief,commString[],certaintyThreshold,history)
   keyboard.commString[] = "\\textrm{$(replace(commString[]," "=>"\\  "))|}"
 
   plot(OrderedDict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all,legend=false)
