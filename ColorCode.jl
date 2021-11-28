@@ -1,4 +1,32 @@
 using DataStructures
+using DataFrames
+using CSV
+
+let #change to struct & function 
+  counts = Dict([(r[1],r[2]+1) for r in eachrow(Matrix(DataFrame(CSV.File("trigram_counts.csv",header=false))))])
+  alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
+  model = Dict([(a*b,OrderedDict([(c,counts[a*b*c]/sum(counts[a*b*d] for d in alphabet)) for c in alphabet])) for a in alphabet, b in alphabet])
+  global function languageModel(prev_letters::String)
+    prior = nothing
+    if length(prev_letters) == 0
+      prior = OrderedDict([(k,sum(model[x*y][k] for x in alphabet for y in alphabet)) for k in alphabet])
+      total = sum(values(prior))
+      for k in keys(prior)
+        prior[k] = prior[k] / total
+      end
+    elseif length(prev_letters) == 1
+      prior = OrderedDict([(k,sum(model[x*prev_letters][k] for x in alphabet)) for k in alphabet])  
+      total = sum(values(prior))
+      for k in keys(prior)
+        prior[k] = prior[k] / total
+      end
+    else #prev_letters >= 2
+      prev_letters = prev_letters[end-1:end]
+      prior = model[prev_letters]
+    end
+    return OrderedDict([(k==' ' ? :SPACE : Symbol(k), v) for (k,v) in prior])
+  end
+end
 
 keyboardStrings = OrderedDict(:A => "A",
                               :B => "B",
@@ -70,9 +98,10 @@ function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int})
 end
 
 function getPrior()
-  freqs = [ 0.0651738 0.0124248 0.0217339 0.0349835 0.1041442 0.0197881 0.0158610 0.0492888 0.0558094 0.0009033 0.0050529 0.0331490 0.0202124 0.0564513 0.0596302 0.0137645 0.0008606 0.0497563 0.0515760 0.0729357 0.0225134 0.0082903 0.0171272 0.0013692 0.0145984 0.0007836 0.1918182]
-  letter_syms = collect(keys(keyboardStrings))
-  prior = OrderedDict([(letter_syms[i], freqs[i]) for i in 1:length(freqs)])
+  #freqs = [ 0.0651738 0.0124248 0.0217339 0.0349835 0.1041442 0.0197881 0.0158610 0.0492888 0.0558094 0.0009033 0.0050529 0.0331490 0.0202124 0.0564513 0.0596302 0.0137645 0.0008606 0.0497563 0.0515760 0.0729357 0.0225134 0.0082903 0.0171272 0.0013692 0.0145984 0.0007836 0.1918182]
+  #letter_syms = collect(keys(keyboardStrings))
+  #prior = OrderedDict([(letter_syms[i], freqs[i]) for i in 1:length(freqs)])
+  prior = languageModel("")
   prior[:UNDO] = 0
   return prior
 end
@@ -81,9 +110,10 @@ function getPrior(commString::String, belief::Belief,selected_letter::Symbol)
   if isempty(commString) #can't do UNDO
     return getPrior()
   else # use past belief to inform
-    freqs = [ 0.0651738 0.0124248 0.0217339 0.0349835 0.1041442 0.0197881 0.0158610 0.0492888 0.0558094 0.0009033 0.0050529 0.0331490 0.0202124 0.0564513 0.0596302 0.0137645 0.0008606 0.0497563 0.0515760 0.0729357 0.0225134 0.0082903 0.0171272 0.0013692 0.0145984 0.0007836 0.1918182]
-    letter_syms = collect(keys(keyboardStrings))
-    prior = OrderedDict([(letter_syms[i], freqs[i]) for i in 1:length(freqs)])
+    #freqs = [ 0.0651738 0.0124248 0.0217339 0.0349835 0.1041442 0.0197881 0.0158610 0.0492888 0.0558094 0.0009033 0.0050529 0.0331490 0.0202124 0.0564513 0.0596302 0.0137645 0.0008606 0.0497563 0.0515760 0.0729357 0.0225134 0.0082903 0.0171272 0.0013692 0.0145984 0.0007836 0.1918182]
+    #letter_syms = collect(keys(keyboardStrings))
+    #prior = OrderedDict([(letter_syms[i], freqs[i]) for i in 1:length(freqs)])
+    prior = languageModel(commString)
 
     prior[:UNDO] = 1 - belief.b[selected_letter] 
     #normalize other probablities
@@ -134,7 +164,7 @@ function chooseLetter(belief::Belief, commString::String, certaintyThreshold::Fl
       commString = commString * nextLetter
       prior = getPrior(commString,belief,selected_letter)
       push!(history,(selected_letter,deepcopy(belief)))
-      #learnLikelihood(belief,selected_letter)
+      learnLikelihood(belief,selected_letter)
       belief.b = prior
       belief.selections = ColorSelections()
     end

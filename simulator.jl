@@ -5,7 +5,7 @@ function simulate(str,error_rate)
   assignment = Dict([(k,1) for k in keys(keyboardStrings)])
 
   prior = getPrior()
-  belief = Belief(prior,9,0)
+  belief = Belief(prior,9,1)
   history = BeliefHistory()
   changeAssignment(belief,assignment)
   certaintyThreshold = 0.95
