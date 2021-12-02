@@ -72,28 +72,50 @@ end
 
 BeliefHistory = Vector{Tuple{Symbol,Belief}}
 
+function colorProbability(color::Int,l::Symbol,belief::Belief,assignment::Dict{Symbol,Int})
+  p_right_color = belief.right_color_count / (belief.right_color_count + belief.wrong_color_count)
+  if assignment[l] == color
+    return p_right_color
+  else
+    return 1 - p_right_color
+  end
+end
+
+function colorProbability(color::Int,belief::Belief,assignment::Dict{Symbol,Int})
+  return sum(belief.b[l]*colorProbability(color,l,belief,assignment) for l in keys(belief.b))
+end
+
+function colorEntropy(belief::Belief, assignment::Dict{Symbol,Int})
+  p(c) = colorProbability(c,belief,assignment)
+  return -sum(p(c)log(2,p(c)) for c in 1:2)
+end
+
 function updateBelief(belief::Belief, color::Int, assignment::Dict{Symbol,Int})
   push!(belief.selections,(color,copy(assignment)))
 
-  p_right_color = belief.right_color_count / (belief.right_color_count + belief.wrong_color_count)
-  p_wrong_color = 1 - p_right_color
-  for sym in keys(belief.b)
-    if assignment[sym] == color
-      belief.b[sym] = p_right_color * belief.b[sym]
-    else
-      belief.b[sym] = p_wrong_color * belief.b[sym]
-    end
+  for l in keys(belief.b)
+    belief.b[l] = colorProbability(color,l,belief,assignment)*belief.b[l]
   end
   total = sum(values(belief.b))
   map!(x->x/total,values(belief.b))
 end
 
 function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int})
-  sorted_belief = sort(collect(belief.b),rev=true,by=x->x[2])
-  color = 1
-  for (sym,_) in sorted_belief
-    assignment[sym] = color
-    color = color == 1 ? 2 : 1
+  #sorted_belief = sort(collect(belief.b),rev=true,by=x->x[2])
+  #color = 1
+  #for (sym,_) in sorted_belief
+  #  assignment[sym] = color
+  #  color = color == 1 ? 2 : 1
+  #end
+
+  m = 1000
+
+  assignments = [Dict([l => c for (l,c) in zip(keys(belief.b),digits(n,base=2,pad=28).+1)]) for n in rand(1:((2^27)-1), m)]
+  entropies = [colorEntropy(belief,a) for a in assignments]
+  a = argmax(entropies)
+  best = assignments[a]
+  for k in keys(assignment)
+    assignment[k] = best[k]
   end
 end
 
