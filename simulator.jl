@@ -7,8 +7,8 @@ function simulate(str,error_rate)
   prior = getPrior()
   belief = Belief(prior,9,1)
   history = BeliefHistory()
-  changeAssignment(belief,assignment)
   certaintyThreshold = 0.95
+  changeAssignment(belief,assignment,certaintyThreshold)
 
   letters = Stack{Symbol}()
   foreach(c->push!(letters,c==' ' ? :SPACE : Symbol(c)), reverse(str))
@@ -25,8 +25,8 @@ function simulate(str,error_rate)
       end
       clickCount += 1.0
       updateBelief(belief,color,assignment)
-      changeAssignment(belief,assignment)
       newCommString = chooseLetter(belief,commString,certaintyThreshold,history)
+      changeAssignment(belief,assignment,certaintyThreshold)
       if length(newCommString) != length(commString)
         new_letter = nothing
         if length(newCommString) > length(commString)

@@ -29,19 +29,19 @@ history = BeliefHistory()
 certaintyThreshold = 0.95
 
 assignment = Dict([(k,1) for k in keys(keyboardStrings)])
-changeAssignment(belief,assignment)
+changeAssignment(belief,assignment,certaintyThreshold)
 renderAssignment(keyboard,assignment)
 
-plot(OrderedDict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all,legend=false)
+plot(OrderedDict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all,legend=false,bar_width=1,size=(1300,500))
 gui()
 
 function buttonCallback(button,commString)
   updateBelief(belief,button,assignment)
-  changeAssignment(belief,assignment)
   commString[] = chooseLetter(belief,commString[],certaintyThreshold,history)
+  changeAssignment(belief,assignment,certaintyThreshold)
   keyboard.commString[] = "\\textrm{$(replace(commString[]," "=>"\\  "))|}"
 
-  plot(OrderedDict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all,legend=false)
+  plot(OrderedDict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all,legend=false,bar_width=1,size=(1300,500))
   gui()
 
   #randomAssignment = Dict([(k,rand(1:2)) for k in keys(keyboardStrings)])
