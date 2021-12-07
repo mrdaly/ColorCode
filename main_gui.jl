@@ -3,6 +3,21 @@ using Blink
 using Plots
 include("ColorCode.jl")
 
+function plotBelief(belief::Belief)
+  plot(OrderedDict(reverse([(string(k),v) for (k,v) in belief.b],dims=1)),
+       plot_title="Belief",
+       ylabel="Key",
+       xlabel="Probability",
+       seriestype=:bar,
+       #bar_width=0.6,
+       orientation=:horizontal,
+       xlims=(0,1),
+       yticks=:all,
+       legend=false)
+       #size=(1100,500))
+  gui()
+end
+
 struct KeyboardFrontEnd
   letters::OrderedDict{Symbol,Widget{:latex,String}}
   commString::Widget{:latex,String}
@@ -32,8 +47,7 @@ assignment = Dict([(k,1) for k in keys(keyboardStrings)])
 changeAssignment(belief,assignment,certaintyThreshold)
 renderAssignment(keyboard,assignment)
 
-plot(OrderedDict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all,legend=false,bar_width=1,size=(1300,500))
-gui()
+plotBelief(belief)
 
 function buttonCallback(button,commString)
   updateBelief(belief,button,assignment)
@@ -41,8 +55,7 @@ function buttonCallback(button,commString)
   changeAssignment(belief,assignment,certaintyThreshold)
   keyboard.commString[] = "\\textrm{$(replace(commString[]," "=>"\\  "))|}"
 
-  plot(OrderedDict([(string(k),v) for (k,v) in belief.b]), seriestype=:bar, ylims = (0,1), xticks = :all,legend=false,bar_width=1,size=(1300,500))
-  gui()
+  plotBelief(belief)
 
   #randomAssignment = Dict([(k,rand(1:2)) for k in keys(keyboardStrings)])
   renderAssignment(keyboard,assignment)
