@@ -14,6 +14,7 @@ function simulate(str,error_rate)
   foreach(c->push!(letters,c==' ' ? :SPACE : Symbol(c)), reverse(str))
   commString = ""
   totalClicks = 0.0
+  print("starting simulate\n")
   while !isempty(letters)
     letter = pop!(letters)
     clickCount = 0.0
@@ -31,9 +32,9 @@ function simulate(str,error_rate)
         new_letter = nothing
         if length(newCommString) > length(commString)
           new_letter = newCommString[end] == ' ' ? :SPACE : Symbol(newCommString[end])
-          print("selected: $(new_letter), click count: $(clickCount)\n")
+          #print("selected: $(new_letter), click count: $(clickCount)\n")
         end
-        length(newCommString) < length(commString) ? print("selected: $(letter), click count: $(clickCount)\n") : nothing
+        #length(newCommString) < length(commString) ? print("selected: $(letter), click count: $(clickCount)\n") : nothing
         commString = newCommString
         if !isnothing(new_letter) && new_letter != letter
           push!(letters,letter)

@@ -4,7 +4,7 @@ using CSV
 using Distributions
 
 let #change to struct & function 
-  counts = Dict([(r[1],r[2]+1) for r in eachrow(Matrix(DataFrame(CSV.File("trigram_counts.csv",header=false))))])
+  counts = Dict([(r[1],r[2]+1) for r in eachrow(Matrix(DataFrame(CSV.File("aac_trigram_counts.csv",header=false))))])
   alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
   model = Dict([(a*b,OrderedDict([(c,counts[a*b*c]/sum(counts[a*b*d] for d in alphabet)) for c in alphabet])) for a in alphabet, b in alphabet])
   global function languageModel(prev_letters::String)
@@ -144,6 +144,38 @@ function sparse_rollout_lookahead(belief,d,m,certaintyThreshold)
   return best.a
 end
 
+function forward_search(belief::Belief,d,m,certaintyThreshold)
+  if any(map(prob->prob>=certaintyThreshold,values(belief.b))) #if we are certain about any of the letters
+    return (a=Dict([l=>1 for l in keys(belief.b)]),u=0)
+  end
+  if d <= 0
+    return (a=nothing,u=0)
+  end
+  best = (a=nothing,u=-Inf)
+  for a in randomAssignments(m)
+    red = 1
+    blue = 2
+
+    red_belief = deepcopy(belief)
+    updateBelief(red_belief,red,a)
+    #u_red = forward_search(red_belief,d-1,Int(ceil(m/10)),certaintyThreshold).u
+    u_red = forward_search(red_belief,d-1,m,certaintyThreshold).u
+
+    blue_belief = deepcopy(belief)
+    updateBelief(blue_belief,blue,a)
+    #u_blue = forward_search(blue_belief,d-1,Int(ceil(m/10)),certaintyThreshold).u
+    u_blue = forward_search(blue_belief,d-1,m,certaintyThreshold).u
+
+    #u = colorEntropy(belief,a) + (0.9)*(colorProbability(red,belief,a)*u_red + colorProbability(blue,belief,a)*u_blue)
+    u = -1 + (0.9)*(colorProbability(red,belief,a)*u_red + colorProbability(blue,belief,a)*u_blue)
+
+    if u > best.u
+      best = (a=a,u=u)
+    end
+  end
+  return best
+end
+
 function sparse_sampling(belief::Belief,d::Int,m,certaintyThreshold)
   #print("in sparse sampling, d = $(d)\n")
   if any(map(prob->prob>=certaintyThreshold,values(belief.b))) #if we are certain about any of the letters
@@ -185,6 +217,18 @@ function updateBelief(belief::Belief, color::Int, assignment::Dict{Symbol,Int})
   map!(x->x/total,values(belief.b))
 end
 
+function entropy_lookahead(belief::Belief,m)
+  assignments = randomAssignments(m)
+  entropies = Vector(undef,m)
+  Threads.@threads for i in 1:m
+  #for i in 1:m
+    entropies[i] = colorEntropy(belief,assignments[i])
+  end
+  #entropies = [colorEntropy(belief,a) for a in assignments]
+  a = argmax(entropies)
+  return assignments[a]
+end
+
 function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int},certaintyThreshold)
   #sorted_belief = sort(collect(belief.b),rev=true,by=x->x[2])
   #color = 1
@@ -193,44 +237,39 @@ function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int},certainty
   #  color = color == 1 ? 2 : 1
   #end
 
-  m = 10000
+  m = 100000
+  #@time best = forward_search(belief,3,m,certaintyThreshold).a
 
-  assignments = [Dict([l => c for (l,c) in zip(keys(belief.b),digits(n,base=2,pad=28).+1)]) for n in rand(1:((2^27)-1), m)]
-  entropies = [colorEntropy(belief,a) for a in assignments]
-  a = argmax(entropies)
-  best = assignments[a]
-  for k in keys(assignment)
-    assignment[k] = best[k]
-  end
+  best = entropy_lookahead(belief,m)
 
   #best = sparse_sampling(belief,1,100,certaintyThreshold).a
   #print("sparse sampling done\n")
-  #for k in keys(assignment)
-  #  assignment[k] = best[k]
-  #end
 
   #best = sparse_rollout_lookahead(belief,5,1000,certaintyThreshold)
-  #for k in keys(assignment)
-  #  assignment[k] = best[k]
-  #end
+  
+  for k in keys(assignment)
+    assignment[k] = best[k]
+  end
+end
+
+function getUniformPrior()
+  nChoices = length(keyboardStrings)
+  prior = OrderedDict{Symbol,Float64}([letter => 1.0/nChoices for letter in keys(keyboardStrings)])
+  return prior
 end
 
 function getPrior()
-  #freqs = [ 0.0651738 0.0124248 0.0217339 0.0349835 0.1041442 0.0197881 0.0158610 0.0492888 0.0558094 0.0009033 0.0050529 0.0331490 0.0202124 0.0564513 0.0596302 0.0137645 0.0008606 0.0497563 0.0515760 0.0729357 0.0225134 0.0082903 0.0171272 0.0013692 0.0145984 0.0007836 0.1918182]
-  #letter_syms = collect(keys(keyboardStrings))
-  #prior = OrderedDict([(letter_syms[i], freqs[i]) for i in 1:length(freqs)])
+  #return getUniformPrior()
   prior = languageModel("")
   prior[:UNDO] = 0
   return prior
 end
 
 function getPrior(commString::String, belief::Belief,selected_letter::Symbol)
+  #return getUniformPrior()
   if isempty(commString) #can't do UNDO
     return getPrior()
   else # use past belief to inform
-    #freqs = [ 0.0651738 0.0124248 0.0217339 0.0349835 0.1041442 0.0197881 0.0158610 0.0492888 0.0558094 0.0009033 0.0050529 0.0331490 0.0202124 0.0564513 0.0596302 0.0137645 0.0008606 0.0497563 0.0515760 0.0729357 0.0225134 0.0082903 0.0171272 0.0013692 0.0145984 0.0007836 0.1918182]
-    #letter_syms = collect(keys(keyboardStrings))
-    #prior = OrderedDict([(letter_syms[i], freqs[i]) for i in 1:length(freqs)])
     prior = languageModel(commString)
 
     prior[:UNDO] = 1 - belief.b[selected_letter] 
