@@ -133,18 +133,48 @@ function entropy_lookahead(belief::Belief,m)
   return assignments[a]
 end
 
+function huffmanAssignment(belief::Belief,assignment::Dict{Symbol,Int})
+  vals = unique(values(assignment))
+  if length(vals) == 2
+    # convert assignment to colors (1 or 2)
+    for l in keys(assignment)
+      assignment[l] = assignment[l] == vals[1] ? 1 : 2
+    end
+    return assignment
+  else
+    probs = OrderedDict{Int,Float64}(v => 0 for v in vals) 
+    for l in keys(assignment)
+      probs[assignment[l]] += belief.b[l]
+    end
+    sorted_vals = map(first, sort(collect(probs),by=last))
+    # merge two least probable values in assignment
+    for l in keys(assignment)
+      if assignment[l] == sorted_vals[2]
+        assignment[l] = sorted_vals[1]
+      end
+    end
+
+    return huffmanAssignment(belief,assignment)
+  end
+end
+
+function huffmanAssignment(belief::Belief)
+  assignment = Dict{Symbol,Int}()
+  c = 1
+  for s in keys(belief.b)
+    assignment[s] = c
+    c += 1
+  end
+  return huffmanAssignment(belief,assignment)
+end
+
 function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int},certaintyThreshold)
   # best = heuristicPolicy(belief)
 
-  m = 1000
-  #@time best = forward_search(belief,3,m,certaintyThreshold).a
-
-  best = entropy_lookahead(belief,m)
-
-  #best = sparse_sampling(belief,1,100,certaintyThreshold).a
-  #print("sparse sampling done\n")
-
-  #best = sparse_rollout_lookahead(belief,5,1000,certaintyThreshold)
+  #m = 1000
+  #best = entropy_lookahead(belief,m)
+  
+  best = huffmanAssignment(belief)
   
   for k in keys(assignment)
     assignment[k] = best[k]

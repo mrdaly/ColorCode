@@ -32,9 +32,9 @@ function simulate(str,error_rate)
         new_letter = nothing
         if length(newCommString) > length(commString)
           new_letter = newCommString[end] == ' ' ? :SPACE : Symbol(newCommString[end])
-          #print("selected: $(new_letter), click count: $(clickCount)\n")
+          print("selected: $(new_letter), click count: $(clickCount)\n")
         end
-        #length(newCommString) < length(commString) ? print("selected: $(letter), click count: $(clickCount)\n") : nothing
+        length(newCommString) < length(commString) ? print("selected: $(letter), click count: $(clickCount)\n") : nothing
         commString = newCommString
         if !isnothing(new_letter) && new_letter != letter
           push!(letters,letter)
