@@ -64,6 +64,17 @@ end
 buttonCallbacks = [on(_->buttonCallback(n,commString),button) for (button,n) in zip(buttons,1:length(buttons))]
 
 w = Window()
+title(w,"ColorCode")
 body!(w,vbox(layoutKeyboard(keyboard),hbox(buttons...)))
+js(w,Blink.JSString("""document.onkeydown = function (e) {Blink.msg("press",e.keyCode)}; """))
+handle(w,"press") do key
+  if key == 37
+    buttonCallback(1,commString)
+  end
+  if key == 39
+    buttonCallback(2,commString)
+
+  end
+end
 
 wait()
