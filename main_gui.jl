@@ -25,17 +25,21 @@ end
 
 function layoutKeyboard(keyboard::KeyboardFrontEnd)
   letterObjs = collect(values(keyboard.letters))
-  return vbox(keyboard.commString,hbox(vbox(letterObjs[1:6]...),vbox(letterObjs[7:12]...),vbox(letterObjs[13:18]...),vbox(letterObjs[19:24]...),vbox(letterObjs[25:end]...)))
+  return vbox(keyboard.commString,
+              vbox(hbox(letterObjs[1:9]...),
+                   hbox(letterObjs[10:18]...),
+                   hbox(letterObjs[19:26]...),
+                   hbox(letterObjs[27:end]...)))
 end
 
 function renderAssignment(keyboard::KeyboardFrontEnd, assignment::Dict{Symbol,Int})
   colors = ["red" "blue"] 
-  foreach(x->keyboard.letters[x[1]][] = "\\fbox{\\color{$(colors[x[2]])} \\textrm{$(keyboardStrings[x[1]])}}",assignment)
+  foreach(x->keyboard.letters[x[1]][] = "\\fbox{\\color{$(colors[x[2]])} \\huge \\texttt{$(keyboardStrings[x[1]])}}",assignment)
 end
 
 buttons = [button(x) for x in ["red" "blue"]]
 
-keyboard = KeyboardFrontEnd(OrderedDict([sym => latex(str) for (sym,str) in keyboardStrings]),latex("\\textrm{|}"))
+keyboard = KeyboardFrontEnd(OrderedDict([sym => latex(str) for (sym,str) in keyboardStrings]),latex("\\Large\\textrm{|}"))
 
 prior = getPrior()
 commString = Ref("")
@@ -53,7 +57,7 @@ function buttonCallback(button,commString)
   updateBelief(belief,button,assignment)
   commString[] = chooseLetter(belief,commString[],certaintyThreshold,history)
   changeAssignment(belief,assignment,certaintyThreshold)
-  keyboard.commString[] = "\\textrm{$(replace(commString[]," "=>"\\  "))|}"
+  keyboard.commString[] = "\\Large\\textrm{$(replace(commString[]," "=>"\\  "))|}"
 
   plotBelief(belief)
 
@@ -65,7 +69,7 @@ buttonCallbacks = [on(_->buttonCallback(n,commString),button) for (button,n) in 
 
 w = Window()
 title(w,"ColorCode")
-body!(w,vbox(layoutKeyboard(keyboard),hbox(buttons...)))
+body!(w,vbox(layoutKeyboard(keyboard),hbox(pad(1em,buttons[1]), pad(1em,buttons[2]))))
 js(w,Blink.JSString("""document.onkeydown = function (e) {Blink.msg("press",e.keyCode)}; """))
 handle(w,"press") do key
   if key == 37
