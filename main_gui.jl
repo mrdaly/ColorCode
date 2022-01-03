@@ -1,6 +1,8 @@
 using Interact
 using Blink
-using Plots
+#using Plots
+using WAV
+using PortAudio
 include("ColorCode.jl")
 
 function plotBelief(belief::Belief)
@@ -51,15 +53,23 @@ assignment = Dict([(k,1) for k in keys(keyboardStrings)])
 changeAssignment(belief,assignment,certaintyThreshold)
 renderAssignment(keyboard,assignment)
 
-plotBelief(belief)
+#plotBelief(belief)
+
+popSound,fs = wavread("pop.wav");
+audioStream = PortAudioStream(0,2)
+write(audioStream,[0 0; 0 0]) #stops lag for some reason does it? idk
 
 function buttonCallback(button,commString)
   updateBelief(belief,button,assignment)
-  commString[] = chooseLetter(belief,commString[],certaintyThreshold,history)
+  newCommString = chooseLetter(belief,commString[],certaintyThreshold,history)
+  if length(newCommString) != length(commString[])
+    @async write(audioStream,popSound)
+  end
+  commString[] = newCommString
   changeAssignment(belief,assignment,certaintyThreshold)
   keyboard.commString[] = "\\Large\\textrm{$(replace(commString[]," "=>"\\  "))|}"
 
-  plotBelief(belief)
+  #plotBelief(belief)
 
   #randomAssignment = Dict([(k,rand(1:2)) for k in keys(keyboardStrings)])
   renderAssignment(keyboard,assignment)
