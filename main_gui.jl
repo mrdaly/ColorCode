@@ -27,19 +27,19 @@ end
 
 function layoutKeyboard(keyboard::KeyboardFrontEnd)
   letterObjs = collect(values(keyboard.letters))
-  return vbox(keyboard.commString,
-              vbox(hbox(letterObjs[1:9]...),
-                   hbox(letterObjs[10:18]...),
-                   hbox(letterObjs[19:26]...),
-                   hbox(letterObjs[27:end]...)))
+  return pad(1em,vbox(pad(0.5em,keyboard.commString),
+                      vbox(pad(0.5em,hbox(map(x->pad(["right"],0.6em,x),letterObjs[1:9])...)),
+                           pad(0.5em,hbox(map(x->pad(["right"],0.6em,x),letterObjs[10:18])...)),
+                           pad(0.5em,hbox(map(x->pad(["right"],0.6em,x),letterObjs[19:26])...)),
+                           pad(0.5em,hbox(map(x->pad(["right"],0.6em,x),letterObjs[27:end])...)))))
 end
 
 function renderAssignment(keyboard::KeyboardFrontEnd, assignment::Dict{Symbol,Int})
   colors = ["red" "blue"] 
-  foreach(x->keyboard.letters[x[1]][] = "\\fbox{\\color{$(colors[x[2]])} \\huge \\texttt{$(keyboardStrings[x[1]])}}",assignment)
+  foreach(x->keyboard.letters[x[1]][] = "\\fbox{\\color{$(colors[x[2]])} \\Huge \\texttt{$(keyboardStrings[x[1]])}}",assignment)
 end
 
-buttons = [button(x) for x in ["red" "blue"]]
+buttons = [button(x,style=Dict(:backgroundColor=>x)) for x in ["red" "blue"]]
 
 keyboard = KeyboardFrontEnd(OrderedDict([sym => latex(str) for (sym,str) in keyboardStrings]),latex("\\Large\\textrm{|}"))
 
@@ -79,7 +79,7 @@ buttonCallbacks = [on(_->buttonCallback(n,commString),button) for (button,n) in 
 
 w = Window()
 title(w,"ColorCode")
-body!(w,vbox(layoutKeyboard(keyboard),hbox(pad(1em,buttons[1]), pad(1em,buttons[2]))))
+body!(w,vbox(layoutKeyboard(keyboard),pad(["left"],6em,hbox(pad(1em,buttons[1]), pad(1em,buttons[2])))))
 js(w,Blink.JSString("""document.onkeydown = function (e) {Blink.msg("press",e.keyCode)}; """))
 handle(w,"press") do key
   if key == 37
