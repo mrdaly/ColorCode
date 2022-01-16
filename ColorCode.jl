@@ -6,11 +6,24 @@ using DataStructures
 module LM
   using CxxWrap
   @wrapmodule(joinpath("LanguageModel","lib","liblanguageModel.so"))
+  #@wrapmodule(joinpath("lib","liblanguageModel.so"))
   function __init__()
     @initcxx
   end
 end
-using LM
+#using LM
+
+function modelPrior(prev_letters::String)
+  alphabet = "abcdefghijklmnopqrstuvwxyz "
+  if length(prev_letters) > 12
+    prev_letters = prev_letters[end-11:end]
+  end
+  prev_letters = lowercase(prev_letters)
+
+  prior = OrderedDict([(k, 10^(LM.languageModel(prev_letters*k))) for k in alphabet])
+  total = sum(values(prior))
+  return OrderedDict([(k==' ' ? :SPACE : Symbol(uppercase(k)), v/total) for (k,v) in prior])
+end
 
 #=let #change to struct & function 
   counts = Dict([(r[1],r[2]+1) for r in eachrow(Matrix(DataFrame(CSV.File("aac_trigram_counts.csv",header=false))))])
@@ -282,11 +295,11 @@ end
 function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int})
    #best = heuristicPolicy(belief)
 
-  m = 1000
-  best = entropy_lookahead(belief,m)
+  #m = 1000
+  #best = entropy_lookahead(belief,m)
   #best = test_entropy_lookahead(belief,m)
   
-  #best = huffmanAssignment(belief)
+  best = huffmanAssignment(belief)
   #(best,huffmanTree) = fullHuffmanAssignment(belief,huffmanTree)
   
   for k in keys(assignment)
@@ -304,7 +317,8 @@ end
 
 function getPrior()
   #return getUniformPrior()
-  prior = languageModel("")
+  #prior = languageModel("")
+  prior = modelPrior("")
   prior[:UNDO] = 0
   return prior
 end
@@ -314,7 +328,8 @@ function getPrior(commString::String, belief::Belief,selected_letter::Symbol)
   if isempty(commString) #can't do UNDO
     return getPrior()
   else # use past belief to inform
-    prior = languageModel(commString)
+    #prior = languageModel(commString)
+    prior = modelPrior(commString)
 
     prior[:UNDO] = 1 - belief.b[selected_letter] 
     #normalize other probablities

@@ -6,7 +6,7 @@ using namespace std;
 
 double languageModel(string str) {
   using namespace lm::ngram;
-  QuantTrieModel model("lm_dec19_char_large_12gram.kenlm");
+  QuantTrieModel model("LanguageModel/lm_dec19_char_tiny_12gram.kenlm");//make path better
   State state(model.BeginSentenceState()), out_state;
   const SortedVocabulary &vocab = model.GetVocabulary();
 
@@ -24,7 +24,28 @@ double languageModel(string str) {
   return logprob;
 }
 
+//literally just duplicate code but I'm just trying to do this fast
+double totalLogProb(string str) {
+  using namespace lm::ngram;
+  QuantTrieModel model("LanguageModel/lm_dec19_char_tiny_12gram.kenlm");//make path better
+  State state(model.BeginSentenceState()), out_state;
+  const SortedVocabulary &vocab = model.GetVocabulary();
+
+  double total;
+  for (int i=0; i < str.length(); i++) {
+    string word;
+    word = str[i];
+    if (word == " ") {
+      word = "<sp>";
+    }
+    total += model.Score(state, vocab.Index(word), out_state);
+    state = out_state;
+  }
+  return total;
+}
+
 JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
 {
   mod.method("languageModel", &languageModel);
+  mod.method("totalLogProb", &totalLogProb);
 }

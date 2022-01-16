@@ -8,3 +8,5 @@
 using namespace std;
 
 double languageModel(string str);
+
+double totalLogProb(string str);
