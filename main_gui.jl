@@ -50,7 +50,8 @@ history = BeliefHistory()
 certaintyThreshold = 0.95
 
 assignment = Dict([(k,1) for k in keys(keyboardStrings)])
-changeAssignment(belief,assignment,certaintyThreshold)
+#huffmanTree = changeAssignment(belief,assignment)
+changeAssignment(belief,assignment)
 renderAssignment(keyboard,assignment)
 
 #plotBelief(belief)
@@ -62,11 +63,14 @@ write(audioStream,popSound) #stops lag for some reason does it? idk
 function buttonCallback(button,commString)
   updateBelief(belief,button,assignment)
   newCommString = chooseLetter(belief,commString[],certaintyThreshold,history)
+  #huffmanTree = button == 1 ? huffmanTree.red : huffmanTree.blue
   if length(newCommString) != length(commString[])
     @async write(audioStream,popSound)
+  #  huffmanTree = nothing
   end
   commString[] = newCommString
-  changeAssignment(belief,assignment,certaintyThreshold)
+  #changeAssignment(belief,assignment,huffmanTree)
+  changeAssignment(belief,assignment)
   keyboard.commString[] = "\\Large\\textrm{$(replace(commString[]," "=>"\\  "))|}"
 
   #plotBelief(belief)

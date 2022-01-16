@@ -1,9 +1,18 @@
 using DataStructures
-using DataFrames
-using CSV
-using Distributions
+#using DataFrames
+#using CSV
+#using Distributions
 
-let #change to struct & function 
+module LM
+  using CxxWrap
+  @wrapmodule(joinpath("LanguageModel","lib","liblanguageModel.so"))
+  function __init__()
+    @initcxx
+  end
+end
+using LM
+
+#=let #change to struct & function 
   counts = Dict([(r[1],r[2]+1) for r in eachrow(Matrix(DataFrame(CSV.File("aac_trigram_counts.csv",header=false))))])
   alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
   model = Dict([(a*b,OrderedDict([(c,counts[a*b*c]/sum(counts[a*b*d] for d in alphabet)) for c in alphabet])) for a in alphabet, b in alphabet])
@@ -28,6 +37,7 @@ let #change to struct & function
     return OrderedDict([(k==' ' ? :SPACE : Symbol(k), v) for (k,v) in prior])
   end
 end
+=#
 
 keyboardStrings = OrderedDict(:A => "A",
                               :B => "B",
@@ -133,6 +143,85 @@ function entropy_lookahead(belief::Belief,m)
   return assignments[a]
 end
 
+function test_entropy_lookahead(belief::Belief,m)
+  assignments = randomAssignments(m)
+  diffs = Vector(undef,m)
+  Threads.@threads for i in 1:m
+  #for i in 1:m
+  diffs[i] = abs(sum(belief.b[l] for l in keys(belief.b) if assignments[i][l]==1) - sum(belief.b[l] for l in keys(belief.b) if assignments[i][l]==2))
+  end
+  a = argmin(diffs)
+  return assignments[a]
+end
+
+struct HuffmanTree
+  symbols::Vector{Symbol}
+  probability::Float64
+  red::Union{Nothing,HuffmanTree}
+  blue::Union{Nothing,HuffmanTree}
+end
+
+function buildHuffmanTree(nodes::Vector{HuffmanTree})
+  if length(nodes) == 1
+    return nodes[1]
+  end
+
+  sorted_nodes = sort(nodes,by=x->x.probability)
+  new_node = HuffmanTree(vcat(sorted_nodes[1].symbols, sorted_nodes[2].symbols),
+                         sorted_nodes[1].probability + sorted_nodes[2].probability,
+                         sorted_nodes[1], sorted_nodes[2])
+  nodes = length(sorted_nodes) >= 3 ? 
+            vcat(new_node, sorted_nodes[3:end]) : Vector{HuffmanTree}([new_node])
+  return buildHuffmanTree(nodes)
+end
+
+function buildHuffmanTree(b::OrderedDict{Symbol,Float64})
+  nodes = Vector{HuffmanTree}()
+
+  for sym in keys(b)
+    push!(nodes,HuffmanTree([sym],b[sym],nothing,nothing))
+  end
+  return buildHuffmanTree(nodes)
+end
+
+function fullHuffmanAssignment(belief::Belief,huffmanTree)
+  if isnothing(huffmanTree) || length(huffmanTree.symbols) == 1
+    huffmanTree = buildHuffmanTree(belief.b)
+  end
+  assignment = Dict{Symbol,Int}()
+  others = []
+  for s in keys(belief.b)
+    if s in huffmanTree.red.symbols
+      assignment[s] = 1
+    elseif s in huffmanTree.blue.symbols
+      assignment[s] = 2
+    else
+      #assignment[s] = rand(1:2)
+      push!(others,s)
+    end
+  end
+  if !isempty(others)
+    assignments = randomAssignments(1000)
+    diffs = Vector(undef,1000)
+    for i in 1:1000
+      redOthers = [belief.b[l] for l in others if assignments[i][l]==1]
+      blueOthers = [belief.b[l] for l in others if assignments[i][l]==2]
+      #redSum = isempty(redOthers) ? 0 : sum(redOthers)
+      redSum = sum(redOthers) + sum(belief.b[l] for l in keys(assignment) if assignment[l]==1)
+      #blueSum = isempty(blueOthers) ? 0 : sum(blueOthers)
+      blueSum = sum(blueOthers) + sum(belief.b[l] for l in keys(assignment) if assignment[l]==2)
+      diffs[i] = abs(redSum - blueSum)
+    end
+    a = argmin(diffs)
+    a = assignments[a]
+    for s in others
+      assignment[s] = a[s]
+    end
+  end
+
+  return (assignment, huffmanTree)
+end
+
 function huffmanAssignment(belief::Belief,assignment::Dict{Symbol,Int})
   vals = unique(values(assignment))
   if length(vals) == 2
@@ -168,17 +257,43 @@ function huffmanAssignment(belief::Belief)
   return huffmanAssignment(belief,assignment)
 end
 
-function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int},certaintyThreshold)
-  # best = heuristicPolicy(belief)
+#=
+function maximizeEntropy(belief::Belief) # only over letter uncertainty
+  a = map(Int∘floor,collect(values(belief.b)).*1000)
 
-  #m = 1000
-  #best = entropy_lookahead(belief,m)
+  dp = Matrix{Bool}(undef,length(a)+1,sum(a)+1)
+  dp[:,1] = true
+  dp[1,2:end] = false
+  for i in 2:length(a)+1, j = 2:sum(a)+1
+    dp[i,j] = dp[i-1,j]
+    if a[i - 1] <= j
+      dp[i,j] |= dp[i-1,j-a[i-1]]
+    end
+  end
+
+  diff = Inf
+  for j in Int(floor(sum(a)/2)):-1:1
+    if 
+  end
+end
+=#
+
+#function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int},huffmanTree=nothing)
+function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int})
+   #best = heuristicPolicy(belief)
+
+  m = 1000
+  best = entropy_lookahead(belief,m)
+  #best = test_entropy_lookahead(belief,m)
   
-  best = huffmanAssignment(belief)
+  #best = huffmanAssignment(belief)
+  #(best,huffmanTree) = fullHuffmanAssignment(belief,huffmanTree)
   
   for k in keys(assignment)
     assignment[k] = best[k]
   end
+
+  #return huffmanTree
 end
 
 function getUniformPrior()
