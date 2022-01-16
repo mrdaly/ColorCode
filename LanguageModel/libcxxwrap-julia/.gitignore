@@ -1,0 +1,6 @@
+/testlib-builder/build
+/testlib-builder/products
+/.vs
+/out/build/x64-Debug
+/CMakeSettings.json
+/build

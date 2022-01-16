@@ -1,0 +1,49 @@
+name: test-win
+on:
+  - push
+  - pull_request
+    
+defaults:
+  run:
+    shell: bash
+    
+jobs:
+  test:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          - '1.6'
+          - '1.7'
+          - 'nightly'
+        os:
+          - windows-latest
+        arch:
+          - x64
+    steps:
+      - uses: actions/checkout@v2
+      - uses: julia-actions/setup-julia@latest
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+      - name: Config 32bit
+        if: ${{ matrix.arch == 'x86'}}
+        run: |
+            mkdir build
+            cd build
+            cmake -G "Visual Studio 16 2019" -A Win32 -DOVERRIDES_PATH=$HOMEDRIVE/$HOMEPATH/.julia/artifacts/Overrides.toml -DOVERRIDE_ROOT=./ -DAPPEND_OVERRIDES_TOML=ON ..
+      - name: Config 64bit
+        if: ${{ matrix.arch == 'x64'}}
+        run: |
+            mkdir build
+            cd build
+            cmake -G "Visual Studio 16 2019" -A x64 -DOVERRIDES_PATH=$HOMEDRIVE/$HOMEPATH/.julia/artifacts/Overrides.toml -DOVERRIDE_ROOT=./ -DAPPEND_OVERRIDES_TOML=ON ..
+      - name: Test
+        run: |
+            cd build
+            cmake --build . --config Release
+            julia -e "using Pkg; Pkg.Registry.add(\"General\"); Pkg.Registry.add(RegistrySpec(url = \"https://github.com/barche/CxxWrapTestRegistry.git\"))"
+            julia -e "using Pkg; pkg\"add CxxWrap#testjll\"; using CxxWrap;"
+            ctest -j 1 -C Release -V
