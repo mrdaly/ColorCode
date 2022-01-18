@@ -20,7 +20,9 @@ function modelPrior(prev_letters::String)
   end
   prev_letters = lowercase(prev_letters)
 
-  prior = OrderedDict([(k, 10^(LM.languageModel(prev_letters*k))) for k in alphabet])
+  logprobs = LM.modelProbabilities(prev_letters, alphabet)
+  #prior = OrderedDict([(k, 10^(LM.languageModel(prev_letters*k))) for k in alphabet])
+  prior = OrderedDict([(alphabet[i], 10^(logprobs[i])) for i in 1:length(alphabet)])
   total = sum(values(prior))
   return OrderedDict([(k==' ' ? :SPACE : Symbol(uppercase(k)), v/total) for (k,v) in prior])
 end
