@@ -43,7 +43,8 @@ buttons = [button(x,style=Dict(:backgroundColor=>x)) for x in ["red" "blue"]]
 
 keyboard = KeyboardFrontEnd(OrderedDict([sym => latex(str) for (sym,str) in keyboardStrings]),latex("\\Large\\textrm{|}"))
 
-prior = getPrior()
+lmState = LM.getStartState()
+prior = getPrior(lmState)
 commString = Ref("")
 belief = Belief(prior,99,1)
 history = BeliefHistory()
@@ -62,7 +63,7 @@ write(audioStream,popSound) #stops lag for some reason does it? idk
 
 function buttonCallback(button,commString)
   updateBelief(belief,button,assignment)
-  newCommString = chooseLetter(belief,commString[],certaintyThreshold,history)
+  newCommString = chooseLetter(belief,commString[],certaintyThreshold,history,lmState)
   #huffmanTree = button == 1 ? huffmanTree.red : huffmanTree.blue
   if length(newCommString) != length(commString[])
     @async write(audioStream,popSound)
@@ -96,3 +97,4 @@ handle(w,"press") do key
 end
 
 wait()
+LM.releaseState(state)

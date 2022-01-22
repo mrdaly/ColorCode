@@ -6,14 +6,23 @@ using DataStructures
 module LM
   using CxxWrap
   @wrapmodule(joinpath("LanguageModel","lib","liblanguageModel.so"))
-  #@wrapmodule(joinpath("lib","liblanguageModel.so"))
   function __init__()
     @initcxx
   end
 end
 #using LM
 
-function modelPrior(prev_letters::String)
+function modelPrior(next_letter::String,lmState)
+  alphabet = "abcdefghijklmnopqrstuvwxyz "
+  next_letter = lowercase(next_letter)
+
+  @time logprobs = LM.model(lmState,next_letter,alphabet)
+  prior = OrderedDict([(alphabet[i], 10^(logprobs[i])) for i in 1:length(alphabet)])
+  total = sum(values(prior))
+  return OrderedDict([(k==' ' ? :SPACE : Symbol(uppercase(k)), v/total) for (k,v) in prior])
+end
+
+#=function modelPrior(prev_letters::String)
   alphabet = "abcdefghijklmnopqrstuvwxyz "
   if length(prev_letters) > 12
     prev_letters = prev_letters[end-11:end]
@@ -21,11 +30,10 @@ function modelPrior(prev_letters::String)
   prev_letters = lowercase(prev_letters)
 
   logprobs = LM.modelProbabilities(prev_letters, alphabet)
-  #prior = OrderedDict([(k, 10^(LM.languageModel(prev_letters*k))) for k in alphabet])
   prior = OrderedDict([(alphabet[i], 10^(logprobs[i])) for i in 1:length(alphabet)])
   total = sum(values(prior))
   return OrderedDict([(k==' ' ? :SPACE : Symbol(uppercase(k)), v/total) for (k,v) in prior])
-end
+end=#
 
 #=let #change to struct & function 
   counts = Dict([(r[1],r[2]+1) for r in eachrow(Matrix(DataFrame(CSV.File("aac_trigram_counts.csv",header=false))))])
@@ -317,21 +325,23 @@ function getUniformPrior()
   return prior
 end
 
-function getPrior()
+function getPrior(lmState)
   #return getUniformPrior()
   #prior = languageModel("")
-  prior = modelPrior("")
+  prior = modelPrior("",lmState)
   prior[:UNDO] = 0
   return prior
 end
 
-function getPrior(commString::String, belief::Belief,selected_letter::Symbol)
+function getPrior(commString::String, belief::Belief,selected_letter::Symbol,lmState)
   #return getUniformPrior()
   if isempty(commString) #can't do UNDO
-    return getPrior()
+    return getPrior(lmState)
   else # use past belief to inform
+    nextLetter = selected_letter == :SPACE ? " " : keyboardStrings[selected_letter]
     #prior = languageModel(commString)
-    prior = modelPrior(commString)
+    #prior = modelPrior(commString)
+    prior = modelPrior(nextLetter,lmState)
 
     prior[:UNDO] = 1 - belief.b[selected_letter] 
     #normalize other probablities
@@ -371,7 +381,7 @@ function undo(belief::Belief,history::BeliefHistory)
 end
 
 # choose letter IF we are confident, and update belief
-function chooseLetter(belief::Belief, commString::String, certaintyThreshold::Float64, history::BeliefHistory)
+function chooseLetter(belief::Belief, commString::String, certaintyThreshold::Float64, history::BeliefHistory, lmState)
   selected_letter = findfirst(prob->prob>=certaintyThreshold,belief.b)
   if !isnothing(selected_letter)
     if selected_letter == :UNDO
@@ -380,7 +390,7 @@ function chooseLetter(belief::Belief, commString::String, certaintyThreshold::Fl
     else
       nextLetter = selected_letter == :SPACE ? " " : keyboardStrings[selected_letter]
       commString = commString * nextLetter
-      prior = getPrior(commString,belief,selected_letter)
+      prior = getPrior(commString,belief,selected_letter,lmState)
       push!(history,(selected_letter,deepcopy(belief)))
       learnLikelihood(belief,selected_letter)
       belief.b = prior

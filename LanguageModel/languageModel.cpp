@@ -2,9 +2,11 @@
 #include <string>
 #include "jlcxx/jlcxx.hpp"
 #include "jlcxx/array.hpp"
+#include "jlcxx/tuple.hpp"
 
 using namespace std;
 using namespace jlcxx;
+using namespace lm::ngram;
 
 double languageModel(string str) {
   using namespace lm::ngram;
@@ -75,9 +77,62 @@ Array<double> modelProbabilities(string prev_letters, string next_letters) {
   return next_letter_probabilities;
 }
 
+template<> struct IsMirroredType<State> : false_type { };
+
+//return model too??
+void* getStartState() {
+  QuantTrieModel model("LanguageModel/lm_dec19_char_large_12gram.kenlm");
+  State* state = new State(model.BeginSentenceState());
+  return (void*)state;
+}
+
+void releaseState(void* statePtr) {
+  State* state = (State*) statePtr;
+  delete state;
+}
+
+Array<double> model(void* statePtr, string letter, string next_letters) {
+  using namespace lm::ngram;
+  State* state = (State*) statePtr;
+  QuantTrieModel model("LanguageModel/lm_dec19_char_large_12gram.kenlm");//make path better
+  State out_state;
+  const SortedVocabulary &vocab = model.GetVocabulary();
+  if (letter == " ") {
+    letter = "<sp>";
+  }
+  double logprob = model.Score(*state, vocab.Index(letter), out_state);
+  *state = out_state;
+
+  Array<double> next_letter_probabilities;
+  for (int i=0; i < next_letters.length(); i++) {
+    string next_letter;
+    next_letter = next_letters[i];
+    if (next_letter == " ") {
+      next_letter = "<sp>";
+    }
+    State dump_state;
+    next_letter_probabilities.push_back(model.Score(*state, vocab.Index(next_letter), dump_state));
+  }
+
+  return next_letter_probabilities;
+}
+
+State test() {
+  QuantTrieModel model("LanguageModel/lm_dec19_char_large_12gram.kenlm");//make path better
+  State state(model.BeginSentenceState()), out_state;
+  //const SortedVocabulary &vocab = model.GetVocabulary();
+
+  return state;
+}
+
 JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
 {
   mod.method("languageModel", &languageModel);
   mod.method("totalLogProb", &totalLogProb);
   mod.method("modelProbabilities", &modelProbabilities);
+  mod.method("model", &model);
+  mod.method("getStartState", &getStartState);
+  mod.method("releaseState", &releaseState);
+  mod.add_type<State>("State");
+  mod.method("test", &test);
 }
