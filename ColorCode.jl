@@ -12,11 +12,11 @@ module LM
 end
 #using LM
 
-function modelPrior(next_letter::String,lmState)
+function modelPrior(next_letter::String,lmModel,lmState)
   alphabet = "abcdefghijklmnopqrstuvwxyz "
   next_letter = lowercase(next_letter)
 
-  @time logprobs = LM.model(lmState,next_letter,alphabet)
+  logprobs = LM.model(lmModel,lmState,next_letter,alphabet)
   prior = OrderedDict([(alphabet[i], 10^(logprobs[i])) for i in 1:length(alphabet)])
   total = sum(values(prior))
   return OrderedDict([(k==' ' ? :SPACE : Symbol(uppercase(k)), v/total) for (k,v) in prior])
@@ -171,7 +171,7 @@ function test_entropy_lookahead(belief::Belief,m)
   diffs = Vector(undef,m)
   Threads.@threads for i in 1:m
   #for i in 1:m
-  diffs[i] = abs(sum(belief.b[l] for l in keys(belief.b) if assignments[i][l]==1) - sum(belief.b[l] for l in keys(belief.b) if assignments[i][l]==2))
+  diffs[i] = abs(colorProbability(1,belief,assignments[i]) - colorProbability(2,belief,assignments[i]))
   end
   a = argmin(diffs)
   return assignments[a]
@@ -280,8 +280,19 @@ function huffmanAssignment(belief::Belief)
   return huffmanAssignment(belief,assignment)
 end
 
-#=
-function maximizeEntropy(belief::Belief) # only over letter uncertainty
+function greedyPartition(belief::Belief)
+  sorted_belief = sort(collect(belief.b),rev=true,by=x->x[2])
+  assignment = Dict{Symbol,Int}()
+  for (sym,_) in sorted_belief
+    redSum = sum(vcat([belief.b[k] for (k,v) in assignment if v==1],0))
+    blueSum = sum(vcat([belief.b[k] for (k,v) in assignment if v==2],0))
+    assignment[sym] = redSum < blueSum ? 1 : 2
+  end
+  return assignment
+end
+
+
+#=function maximizeEntropy(belief::Belief) # only over letter uncertainty
   a = map(Int∘floor,collect(values(belief.b)).*1000)
 
   dp = Matrix{Bool}(undef,length(a)+1,sum(a)+1)
@@ -298,18 +309,19 @@ function maximizeEntropy(belief::Belief) # only over letter uncertainty
   for j in Int(floor(sum(a)/2)):-1:1
     if 
   end
-end
-=#
+end=#
 
 #function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int},huffmanTree=nothing)
 function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int})
    #best = heuristicPolicy(belief)
 
-  #m = 1000
+  #m = 10000
   #best = entropy_lookahead(belief,m)
   #best = test_entropy_lookahead(belief,m)
+  #
+  best = greedyPartition(belief)
   
-  best = huffmanAssignment(belief)
+  #best = huffmanAssignment(belief)
   #(best,huffmanTree) = fullHuffmanAssignment(belief,huffmanTree)
   
   for k in keys(assignment)
@@ -325,15 +337,15 @@ function getUniformPrior()
   return prior
 end
 
-function getPrior(lmState)
+function getPrior(lmModel,lmState)
   #return getUniformPrior()
   #prior = languageModel("")
-  prior = modelPrior("",lmState)
+  prior = modelPrior("",lmModel,lmState)
   prior[:UNDO] = 0
   return prior
 end
 
-function getPrior(commString::String, belief::Belief,selected_letter::Symbol,lmState)
+function getPrior(commString::String, belief::Belief,selected_letter::Symbol,lmModel,lmState)
   #return getUniformPrior()
   if isempty(commString) #can't do UNDO
     return getPrior(lmState)
@@ -341,7 +353,7 @@ function getPrior(commString::String, belief::Belief,selected_letter::Symbol,lmS
     nextLetter = selected_letter == :SPACE ? " " : keyboardStrings[selected_letter]
     #prior = languageModel(commString)
     #prior = modelPrior(commString)
-    prior = modelPrior(nextLetter,lmState)
+    prior = modelPrior(nextLetter,lmModel,lmState)
 
     prior[:UNDO] = 1 - belief.b[selected_letter] 
     #normalize other probablities
@@ -381,7 +393,7 @@ function undo(belief::Belief,history::BeliefHistory)
 end
 
 # choose letter IF we are confident, and update belief
-function chooseLetter(belief::Belief, commString::String, certaintyThreshold::Float64, history::BeliefHistory, lmState)
+function chooseLetter(belief::Belief, commString::String, certaintyThreshold::Float64, history::BeliefHistory,lmModel, lmState)
   selected_letter = findfirst(prob->prob>=certaintyThreshold,belief.b)
   if !isnothing(selected_letter)
     if selected_letter == :UNDO
@@ -390,7 +402,7 @@ function chooseLetter(belief::Belief, commString::String, certaintyThreshold::Fl
     else
       nextLetter = selected_letter == :SPACE ? " " : keyboardStrings[selected_letter]
       commString = commString * nextLetter
-      prior = getPrior(commString,belief,selected_letter,lmState)
+      prior = getPrior(commString,belief,selected_letter,lmModel,lmState)
       push!(history,(selected_letter,deepcopy(belief)))
       learnLikelihood(belief,selected_letter)
       belief.b = prior

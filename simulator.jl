@@ -5,8 +5,9 @@ include("ColorCode.jl")
 function simulate(str,error_rate)
   assignment = Dict([(k,1) for k in keys(keyboardStrings)])
 
-  lmState = LM.getStartState()
-  prior = getPrior(lmState)
+  lmModel = LM.getModel()
+  lmState = LM.getStartState(lmModel)
+  prior = getPrior(lmModel,lmState)
   belief = Belief(prior,9,1)
   history = BeliefHistory()
   certaintyThreshold = 0.95
@@ -29,7 +30,7 @@ function simulate(str,error_rate)
       end
       clickCount += 1.0
       updateBelief(belief,color,assignment)
-      newCommString = chooseLetter(belief,commString,certaintyThreshold,history,lmState)
+      newCommString = chooseLetter(belief,commString,certaintyThreshold,history,lmModel,lmState)
       #huffmanTree = color == 1 ? huffmanTree.red : huffmanTree.blue
       #huffmanTree = length(newCommString) != length(commString) ? nothing : huffmanTree
       #huffmanTree = changeAssignment(belief,assignment,huffmanTree)
@@ -51,6 +52,7 @@ function simulate(str,error_rate)
     end
     totalClicks += clickCount
   end
+  LM.releaseModel(lmModel)
   LM.releaseState(lmState)
   clicksPerChar = totalClicks/length(str)
   print("error_rate=$(error_rate), average clicks per letter: $(clicksPerChar)\n")

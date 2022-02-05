@@ -79,10 +79,20 @@ Array<double> modelProbabilities(string prev_letters, string next_letters) {
 
 template<> struct IsMirroredType<State> : false_type { };
 
+void* getModel() {
+  QuantTrieModel* model = new QuantTrieModel("LanguageModel/lm_dec19_char_huge_12gram.kenlm");//make path better
+  return (void*)model;
+}
+
+void releaseModel(void* modelPtr) {
+  QuantTrieModel* model = (QuantTrieModel*) modelPtr; 
+  delete model;
+}
+
 //return model too??
-void* getStartState() {
-  QuantTrieModel model("LanguageModel/lm_dec19_char_large_12gram.kenlm");
-  State* state = new State(model.BeginSentenceState());
+void* getStartState(void* modelPtr) {
+  QuantTrieModel* model = (QuantTrieModel*) modelPtr; 
+  State* state = new State(model->BeginSentenceState());
   return (void*)state;
 }
 
@@ -91,16 +101,16 @@ void releaseState(void* statePtr) {
   delete state;
 }
 
-Array<double> model(void* statePtr, string letter, string next_letters) {
+Array<double> model(void* modelPtr, void* statePtr, string letter, string next_letters) {
   using namespace lm::ngram;
+  QuantTrieModel* model = (QuantTrieModel*) modelPtr; 
   State* state = (State*) statePtr;
-  QuantTrieModel model("LanguageModel/lm_dec19_char_large_12gram.kenlm");//make path better
   State out_state;
-  const SortedVocabulary &vocab = model.GetVocabulary();
+  const SortedVocabulary &vocab = model->GetVocabulary();
   if (letter == " ") {
     letter = "<sp>";
   }
-  double logprob = model.Score(*state, vocab.Index(letter), out_state);
+  double logprob = model->Score(*state, vocab.Index(letter), out_state);
   *state = out_state;
 
   Array<double> next_letter_probabilities;
@@ -111,7 +121,7 @@ Array<double> model(void* statePtr, string letter, string next_letters) {
       next_letter = "<sp>";
     }
     State dump_state;
-    next_letter_probabilities.push_back(model.Score(*state, vocab.Index(next_letter), dump_state));
+    next_letter_probabilities.push_back(model->Score(*state, vocab.Index(next_letter), dump_state));
   }
 
   return next_letter_probabilities;
@@ -133,6 +143,8 @@ JLCXX_MODULE define_julia_module(jlcxx::Module& mod)
   mod.method("model", &model);
   mod.method("getStartState", &getStartState);
   mod.method("releaseState", &releaseState);
+  mod.method("getModel", &getModel);
+  mod.method("releaseModel", &releaseModel);
   mod.add_type<State>("State");
   mod.method("test", &test);
 }
