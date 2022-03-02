@@ -11,3 +11,8 @@ Warning: It takes a few minutes for the GUI to startup.
 ## Installation
 
 ## License
+
+ColorCode is licensed under the MIT license, but this repository also contains dependencies with different licenses. See their license files for more information:
+- KenLM: `LanguageModel/kenlm/LICENSE`
+- libcxxwrap-julia: `LanguageModel/libcxxwrap-julia/LICENSE.md`
+
