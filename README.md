@@ -7,12 +7,11 @@
 
 This is necessary to call the c++ code for the language model from julia. (This requires cmake)
 
-``cd LanguageModel
-mdkir libcxxwrap-julia-build
-cd libcxxwrap-julia-build
-cmake ../libcxxwrap-julia
-make
-``
+    cd LanguageModel
+    mdkir libcxxwrap-julia-build
+    cd libcxxwrap-julia-build
+    cmake ../libcxxwrap-julia
+    make
 
 2. [Download the language model (1.4 GB)](http://data.imagineville.org/lm/dec19_char/lm_dec19_char_huge_12gram.kenlm.gz), and extract the compressed file to the LanguageModel directory.
  
