@@ -1,5 +1,6 @@
 # ColorCode
 
+[Watch this for a demo](https://www.youtube.com/watch?v=HtPYEFwMhHo)
 
 ## Installation
 
@@ -17,7 +18,7 @@ This is necessary to call the c++ code for the language model from julia. (This 
  
 3. Build the C++ code
 
-Now you need to build the C++ code for calling the language model. Execute the compile_query_only.sh script (``./compile_query_only.sh``). Looking back at this makefile, it points to "/Applications/Julia-1.7.app/Contents/Resources/julia/lib" and "/Applications/Julia-1.7.app/Contents/Resources/julia/include/julia", which I believe is necessary for the interoperation of julia and c++. So I guess make sure that you have the Julia 1.7 app in that location.
+Now you need to build the C++ code for calling the language model. Execute the compile_query_only.sh script (``./compile_query_only.sh``). Looking back at this makefile, it points to ``/Applications/Julia-1.7.app/Contents/Resources/julia/lib`` and ``/Applications/Julia-1.7.app/Contents/Resources/julia/include/julia``, which I believe is necessary for the interoperation of julia and c++. So I guess make sure that you have the Julia 1.7 app in that location.
 
 ## Running it
 
