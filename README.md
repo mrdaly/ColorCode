@@ -4,6 +4,10 @@
 
 ## Installation
 
+NB: This is for MacOS. Build steps will be roughly the same for other platforms
+
+First - make sure you have [Julia installed](https://julialang.org/downloads/). 
+
 1. Build libcxxwrap dependency
 
 This is necessary to call the c++ code for the language model from julia. (This requires cmake)
