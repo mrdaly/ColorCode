@@ -1,5 +1,5 @@
 using Statistics
-using Plots
+#using Plots
 include("ColorCode.jl")
 
 function simulate(str,error_rate)
@@ -11,7 +11,6 @@ function simulate(str,error_rate)
   belief = Belief(prior,9,1)
   history = BeliefHistory()
   certaintyThreshold = 0.95
-  #huffmanTree = changeAssignment(belief,assignment)
   changeAssignment(belief,assignment)
 
   letters = Stack{Symbol}()
@@ -31,9 +30,6 @@ function simulate(str,error_rate)
       clickCount += 1.0
       updateBelief(belief,color,assignment)
       newCommString = chooseLetter(belief,commString,certaintyThreshold,history,lmModel,lmState)
-      #huffmanTree = color == 1 ? huffmanTree.red : huffmanTree.blue
-      #huffmanTree = length(newCommString) != length(commString) ? nothing : huffmanTree
-      #huffmanTree = changeAssignment(belief,assignment,huffmanTree)
       changeAssignment(belief,assignment)
       if length(newCommString) != length(commString)
         new_letter = nothing
@@ -61,26 +57,25 @@ end
 
 function simulate(str)
   h2(x) = x*log(2,1/x) + (1-x)*log(2,1/(1-x))
-  #error_rates = 0.01:0.01:0.2
   error_rates = 0.01:0.01:0.45
   base = simulate(str,0)
-  p1 = plot(x->1/((1-h2(x))/base),xlim=[0 0.5],legend=false,xticks=error_rates,yticks=0:0.5:35,minorgrid=true)
-  gui()
+  #p1 = plot(x->1/((1-h2(x))/base),xlim=[0 0.5],legend=false,xticks=error_rates,yticks=0:0.5:35,minorgrid=true)
+  #gui()
   results = []
   for r in error_rates
     res = simulate(str,r)
     push!(results,res)
-    plot!(p1,[r],[res],seriestype=:scatter)
-    gui()
+    #plot!(p1,[r],[res],seriestype=:scatter)
+    #gui()
   end
   print("results: \n")
   print(results)
 
-  p2 = plot(x->1-h2(x),xlim=[0 0.5],xticks=0:0.05:0.5,yticks=0:0.1:1.0,minorgrid=true)
-  i = base ./ results
-  plot!(p2,error_rates,i,seriestype=:scatter)
-  gui(p2)
-  wait()
+  #p2 = plot(x->1-h2(x),xlim=[0 0.5],xticks=0:0.05:0.5,yticks=0:0.1:1.0,minorgrid=true)
+  #i = base ./ results
+  #plot!(p2,error_rates,i,seriestype=:scatter)
+  #gui(p2)
+  #wait()
 end
 
 

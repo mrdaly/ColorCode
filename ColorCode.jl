@@ -1,7 +1,4 @@
 using DataStructures
-#using DataFrames
-#using CSV
-#using Distributions
 
 module LM
   using CxxWrap
@@ -10,7 +7,6 @@ module LM
     @initcxx
   end
 end
-#using LM
 
 function modelPrior(next_letter::String,lmModel,lmState)
   alphabet = "abcdefghijklmnopqrstuvwxyz "
@@ -21,46 +17,6 @@ function modelPrior(next_letter::String,lmModel,lmState)
   total = sum(values(prior))
   return OrderedDict([(k==' ' ? :SPACE : Symbol(uppercase(k)), v/total) for (k,v) in prior])
 end
-
-#=function modelPrior(prev_letters::String)
-  alphabet = "abcdefghijklmnopqrstuvwxyz "
-  if length(prev_letters) > 12
-    prev_letters = prev_letters[end-11:end]
-  end
-  prev_letters = lowercase(prev_letters)
-
-  logprobs = LM.modelProbabilities(prev_letters, alphabet)
-  prior = OrderedDict([(alphabet[i], 10^(logprobs[i])) for i in 1:length(alphabet)])
-  total = sum(values(prior))
-  return OrderedDict([(k==' ' ? :SPACE : Symbol(uppercase(k)), v/total) for (k,v) in prior])
-end=#
-
-#=let #change to struct & function 
-  counts = Dict([(r[1],r[2]+1) for r in eachrow(Matrix(DataFrame(CSV.File("aac_trigram_counts.csv",header=false))))])
-  alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
-  model = Dict([(a*b,OrderedDict([(c,counts[a*b*c]/sum(counts[a*b*d] for d in alphabet)) for c in alphabet])) for a in alphabet, b in alphabet])
-  global function languageModel(prev_letters::String)
-    prior = nothing
-    if length(prev_letters) == 0
-      prior = OrderedDict([(k,sum(model[x*y][k] for x in alphabet for y in alphabet)) for k in alphabet])
-      total = sum(values(prior))
-      for k in keys(prior)
-        prior[k] = prior[k] / total
-      end
-    elseif length(prev_letters) == 1
-      prior = OrderedDict([(k,sum(model[x*prev_letters][k] for x in alphabet)) for k in alphabet])  
-      total = sum(values(prior))
-      for k in keys(prior)
-        prior[k] = prior[k] / total
-      end
-    else #prev_letters >= 2
-      prev_letters = prev_letters[end-1:end]
-      prior = model[prev_letters]
-    end
-    return OrderedDict([(k==' ' ? :SPACE : Symbol(k), v) for (k,v) in prior])
-  end
-end
-=#
 
 keyboardStrings = OrderedDict(:A => "A",
                               :B => "B",
@@ -143,108 +99,6 @@ function updateBelief(belief::Belief, color::Int, assignment::Dict{Symbol,Int})
   map!(x->x/total,values(belief.b))
 end
 
-function heuristicPolicy(belief)
-  sorted_belief = sort(collect(belief.b),rev=true,by=x->x[2])
-  color = 1
-  assignment = Dict{Symbol,Int}()
-  for (sym,_) in sorted_belief
-    assignment[sym] = color
-    color = color == 1 ? 2 : 1
-  end
-  return assignment
-end
-
-function entropy_lookahead(belief::Belief,m)
-  assignments = randomAssignments(m)
-  entropies = Vector(undef,m)
-  Threads.@threads for i in 1:m
-  #for i in 1:m
-    entropies[i] = colorEntropy(belief,assignments[i])
-  end
-  #entropies = [colorEntropy(belief,a) for a in assignments]
-  a = argmax(entropies)
-  return assignments[a]
-end
-
-function test_entropy_lookahead(belief::Belief,m)
-  assignments = randomAssignments(m)
-  diffs = Vector(undef,m)
-  Threads.@threads for i in 1:m
-  #for i in 1:m
-  diffs[i] = abs(colorProbability(1,belief,assignments[i]) - colorProbability(2,belief,assignments[i]))
-  end
-  a = argmin(diffs)
-  return assignments[a]
-end
-
-struct HuffmanTree
-  symbols::Vector{Symbol}
-  probability::Float64
-  red::Union{Nothing,HuffmanTree}
-  blue::Union{Nothing,HuffmanTree}
-end
-
-function buildHuffmanTree(nodes::Vector{HuffmanTree})
-  if length(nodes) == 1
-    return nodes[1]
-  end
-
-  sorted_nodes = sort(nodes,by=x->x.probability)
-  new_node = HuffmanTree(vcat(sorted_nodes[1].symbols, sorted_nodes[2].symbols),
-                         sorted_nodes[1].probability + sorted_nodes[2].probability,
-                         sorted_nodes[1], sorted_nodes[2])
-  nodes = length(sorted_nodes) >= 3 ? 
-            vcat(new_node, sorted_nodes[3:end]) : Vector{HuffmanTree}([new_node])
-  return buildHuffmanTree(nodes)
-end
-
-function buildHuffmanTree(b::OrderedDict{Symbol,Float64})
-  nodes = Vector{HuffmanTree}()
-
-  for sym in keys(b)
-    push!(nodes,HuffmanTree([sym],b[sym],nothing,nothing))
-  end
-  return buildHuffmanTree(nodes)
-end
-
-function fullHuffmanAssignment(belief::Belief,huffmanTree)
-  if isnothing(huffmanTree) || length(huffmanTree.symbols) == 1
-    huffmanTree = buildHuffmanTree(belief.b)
-  end
-  assignment = Dict{Symbol,Int}()
-  others = []
-  for s in keys(belief.b)
-    if s in huffmanTree.red.symbols
-      assignment[s] = 1
-    elseif s in huffmanTree.blue.symbols
-      assignment[s] = 2
-    else
-      #assignment[s] = rand(1:2)
-      push!(others,s)
-    end
-  end
-  if !isempty(others)
-    assignments = randomAssignments(1000)
-    diffs = Vector(undef,1000)
-    for i in 1:1000
-      redOthers = [belief.b[l] for l in others if assignments[i][l]==1]
-      blueOthers = [belief.b[l] for l in others if assignments[i][l]==2]
-      #redSum = isempty(redOthers) ? 0 : sum(redOthers)
-      redSum = sum(redOthers) + sum(belief.b[l] for l in keys(assignment) if assignment[l]==1)
-      #blueSum = isempty(blueOthers) ? 0 : sum(blueOthers)
-      blueSum = sum(blueOthers) + sum(belief.b[l] for l in keys(assignment) if assignment[l]==2)
-      diffs[i] = abs(redSum - blueSum)
-    end
-    a = argmin(diffs)
-    a = assignments[a]
-    for s in others
-      assignment[s] = a[s]
-    end
-  end
-
-  return (assignment, huffmanTree)
-end
-
 function huffmanAssignment(belief::Belief,assignment::Dict{Symbol,Int})
   vals = unique(values(assignment))
   if length(vals) == 2
@@ -291,44 +145,14 @@ function greedyPartition(belief::Belief)
   return assignment
 end
 
-
-#=function maximizeEntropy(belief::Belief) # only over letter uncertainty
-  a = map(Int∘floor,collect(values(belief.b)).*1000)
-
-  dp = Matrix{Bool}(undef,length(a)+1,sum(a)+1)
-  dp[:,1] = true
-  dp[1,2:end] = false
-  for i in 2:length(a)+1, j = 2:sum(a)+1
-    dp[i,j] = dp[i-1,j]
-    if a[i - 1] <= j
-      dp[i,j] |= dp[i-1,j-a[i-1]]
-    end
-  end
-
-  diff = Inf
-  for j in Int(floor(sum(a)/2)):-1:1
-    if 
-  end
-end=#
-
-#function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int},huffmanTree=nothing)
 function changeAssignment(belief::Belief, assignment::Dict{Symbol,Int})
-   #best = heuristicPolicy(belief)
-
-  #m = 10000
-  #best = entropy_lookahead(belief,m)
-  #best = test_entropy_lookahead(belief,m)
-  #
   best = greedyPartition(belief)
   
   #best = huffmanAssignment(belief)
-  #(best,huffmanTree) = fullHuffmanAssignment(belief,huffmanTree)
   
   for k in keys(assignment)
     assignment[k] = best[k]
   end
-
-  #return huffmanTree
 end
 
 function getUniformPrior()
@@ -339,7 +163,6 @@ end
 
 function getPrior(lmModel,lmState)
   #return getUniformPrior()
-  #prior = languageModel("")
   prior = modelPrior("",lmModel,lmState)
   prior[:UNDO] = 0
   return prior
@@ -351,8 +174,6 @@ function getPrior(commString::String, belief::Belief,selected_letter::Symbol,lmM
     return getPrior(lmState)
   else # use past belief to inform
     nextLetter = selected_letter == :SPACE ? " " : keyboardStrings[selected_letter]
-    #prior = languageModel(commString)
-    #prior = modelPrior(commString)
     prior = modelPrior(nextLetter,lmModel,lmState)
 
     prior[:UNDO] = 1 - belief.b[selected_letter] 
@@ -372,7 +193,6 @@ function learnLikelihood(belief::Belief,selected_letter::Symbol)
     wrong_count = sum(color != assignment[selected_letter] for (color,assignment) in selections)
     belief.right_color_count += right_count
     belief.wrong_color_count += wrong_count
-    #print("right count: $(belief.right_color_count) wrong count: $(belief.wrong_color_count)\n")
 end
 
 function undo(belief::Belief,history::BeliefHistory)

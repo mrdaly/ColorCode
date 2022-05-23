@@ -240,3 +240,6 @@ test/readme.txt
 test/sent_dev_aac.txt
 test/sent_test_aac.txt
 test/vocab_aac_twitter.txt
+belief_plot.svg
+LanguageModel/lm_dec19_char_huge_12gram.kenlm
+LanguageModel/lm_dec19_char_huge_12gram.kenlm
