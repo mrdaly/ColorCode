@@ -28,6 +28,14 @@ The `JULIA_INSTALL_DIR` variable in `compile_query_only.sh` should point to your
 
 ### Julia packages
 
+ColorCode requires the following Julia packages:
+- DataStructures.jl
+- CxxWrap.jl
+- Interact.jl
+- Blink.jl
+- WAV.jl
+- PortAudio.jl
+
 ## Use
 
 ### Launch
@@ -52,4 +60,8 @@ Exitting the GUI does not quit the program, so you need to kill the program (CTR
 ColorCode is licensed under the MIT license, but this repository also contains dependencies with different licenses. See their license files for more information:
 - KenLM: `LanguageModel/kenlm/LICENSE`
 - libcxxwrap-julia: `LanguageModel/libcxxwrap-julia/LICENSE.md`
+
+## Questions
+
+If you have any questions about the paper or the code, please email me. My email address can be found in the paper.
 
