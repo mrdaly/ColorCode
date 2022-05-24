@@ -1,6 +1,23 @@
 # ColorCode
 ## Paper
-The paper for this project, "ColorCode: A Bayesian Approach to Augmentative and Alternative Communication with Two Buttons" is part of the ACL 2022 SLPAT workshop. It can be found on arXiv [here](https://arxiv.org/abs/2204.09745). 
+The paper for this project, "ColorCode: A Bayesian Approach to Augmentative and Alternative Communication with Two Buttons" is part of the ACL 2022 SLPAT workshop. It can be found on arXiv [here](https://arxiv.org/abs/2204.09745).
+
+### Cite
+
+Matthew Daly. 2022. [ColorCode: A Bayesian Approach to Augmentative and Alternative Communication with Two Buttons](https://aclanthology.org/2022.slpat-1.2). In *Ninth Workshop on Speech and Language Processing for Assistive Technologies (SLPAT-2022)*, pages 17–23, Dublin, Ireland. Association for Computational Linguistics.
+
+    @inproceedings{daly-2022-colorcode,
+        title = "{C}olor{C}ode: A {B}ayesian Approach to Augmentative and Alternative Communication with Two Buttons",
+        author = "Daly, Matthew",
+        booktitle = "Ninth Workshop on Speech and Language Processing for Assistive Technologies (SLPAT-2022)",
+        month = may,
+        year = "2022",
+        address = "Dublin, Ireland",
+        publisher = "Association for Computational Linguistics",
+        url = "https://aclanthology.org/2022.slpat-1.2",
+        pages = "17--23"
+    }
+
 
 ## Installation
 
