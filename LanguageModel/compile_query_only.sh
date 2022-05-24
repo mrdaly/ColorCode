@@ -34,5 +34,6 @@ if [ "$(uname)" != Darwin ]; then
 fi
 #$CXX lm/build_binary_main.cc $objects -o bin/build_binary $CXXFLAGS $LDFLAGS
 #$CXX lm/query_main.cc $objects -o bin/query $CXXFLAGS $LDFLAGS
-$CXX -I./libcxxwrap-julia/include/ -I/Applications/Julia-1.7.app/Contents/Resources/julia/include/julia $CXXFLAGS -c languageModel.cpp -o languageModel.cpp.o
-$CXX -shared $objects languageModel.cpp.o -o lib/liblanguageModel.so -L./libcxxwrap-julia-build/lib -L/Applications/Julia-1.7.app/Contents/Resources/julia/lib -ljulia -lcxxwrap_julia $CXXFLAGS $LDFLAGS
+JULIA_INSTALL_DIR=/Applications/Julia-1.7.app/Contents/Resources/julia/
+$CXX -I./libcxxwrap-julia/include/ -I$JULIA_INSTALL_DIR/include/julia $CXXFLAGS -c languageModel.cpp -o languageModel.cpp.o
+$CXX -shared $objects languageModel.cpp.o -o lib/liblanguageModel.so -L./libcxxwrap-julia-build/lib -L$JULIA_INSTALL_DIR/lib -ljulia -lcxxwrap_julia $CXXFLAGS $LDFLAGS

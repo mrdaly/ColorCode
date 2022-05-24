@@ -58,7 +58,7 @@ renderAssignment(keyboard,assignment)
 #plotBelief(belief)
 
 popSound,fs = wavread("pop.wav");
-audioStream = PortAudioStream(0,2)
+audioStream = PortAudioStream(0,2,adjust_channels=true)
 write(audioStream,popSound) #stops lag for some reason does it? idk
 
 function buttonCallback(button,commString)
